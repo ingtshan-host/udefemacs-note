@@ -1,0 +1,20 @@
+#+title: 这！是@个》漂】亮【的=测、试
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+#+end_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- 自顶向下设计
+  - 子功能
+
+- Q
+  - X false/or not now
+  - A right
+    - Q/A
+    - S1 solution 1

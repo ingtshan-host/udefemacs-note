@@ -1,0 +1,255 @@
+#+title: 问题/功能/目的 log
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+#+begin_quote
+Summary: In this log, I accomplished my function design and implement,in which main goal is to
+create ./file-name-base.d/user-input-with-format.org file under calling's buffer
+directory, at same time insert some template content to new file.
+
+总结：在这个日志文件中，我完成了自己的功能函数设计和实现，具体功能是在任何文件
+(最好是 org 文件)的当
+前路径下，新建一个 file-name-base.d/user-input-with-format.org 的文件，并插入一些
+模版。
+
+Concept and Soltion:
+- ~read-string~ from ~minibuffer~
+- ~string-math-p~
+- ~replace-regex-in-string~
+- ~with-temp-buffer~  ~write-file~ (emacs's ~buffer~ and ~file~ concept)
+
+概念和方法：string 读取和搜索和替换，buffer 处理和写出
+#+end_quote
+
+[[./函数-log流程-新建问题解决日志.d/这-是@个-漂-亮-的=测-试.org][这！是@个》漂】亮【的=测、试]]
+
+功能设计
+- 交互函数
+- 文件创建
+  - 标题：符号空格替换
+    - 全角替换为半角 Half-width full-width
+    - 空格替换为
+  - 内容：自动生成标题和日期
+  - 防止重写文件
+- 连接到调用处
+  - org link 相对路径格式
+    
+- Q [[https://doc.endlessparentheses.com/Fun/read-input.html][how to read user input?]]
+  - A ~read-string~ not string-read
+  - Q/A form where? minibuffer
+    - Q naming pattern?
+      - find more funtion with string by ~C-h f~
+      - string operator: ~string-match~ ~string=~ ~string<~
+      - return string: ~format-string~ ~make-string~
+- Q for right file name: how to conver symbol from full-width to half width?
+  - S1 Under Unicode charset, directly operator char code by minus 65248)
+    - Q how to get char of string? and how to get code of char?
+    - X not now
+  - S2 conver base on ~string-match~ like (with Regex maybe)
+    - A [[http://ergoemacs.org/emacs/elisp_convert_chinese_punctuation.html][Emacs: Convert Full\-Width/Half\-Width Punctuations]]
+      - S modify from convert current buffer to convert input string
+        - 1. check needed
+          - Q which symbol I want to check?
+        - 2. use regex Pairs to convert
+          - Q meet function in *.c of emacs
+            - X ~aref~
+            - X ~search-forward~
+            - X ~mapc~
+            - X ~save-restriction~
+            - X ~goto-char~
+            - A ~seq-reduce~
+          - [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Regexp-Search.html][more regular exoression searching]]
+            - A ~string-match-p~
+          - [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Search-and-Replace.html][more replace with regexp searching]]
+            - A ~replace-regexp-in-string~
+          - Q meet value of buffer
+            - X ~point-min~
+            - X ~point-max~
+- Q just for fun: how to use ~defmaro~
+  - Q what's the meaning of ~(declare (indent *))~
+    - A? to keep Elisp code nice and indented?
+      - what's the indent level work?
+- Q how to creat file with template ?
+  - A meet ~with-temp-buffer~ and ~write-file~
+
+#+begin_src elisp
+(defun log/org-create-current-file-d-subfile ()
+  "workflow of logging
+noviemacs-principal:
+问题-答案，功能-方案，目的-过程 等自上而下带指导"
+  (interactive)
+  (let* ((title (read-string "问题/功能/目的："))
+         ;;，。《》？【】「」、～（）——！｜‘’“”；：
+         (rl '("[，。《》？【】「」、～（）——！｜‘’“”；：/ ]" . "\-"))
+         (file (concat
+                "./" (file-name-base (buffer-name)) ".d/"
+                (if (string-match-p (car rl) title)
+                    ;; use format title as filename
+                    (replace-regexp-in-string
+                     (car rl) (cdr rl) title) title) ".org")))
+    ;; say we call at ~/.emacs.d/ with base name noviemacs-log
+    ;; input title: 问题/功能/目的：log 流程
+    ;; then file is relative path now as
+    ;; ./noviemacs-log.d/问题-功能-目的-log-流程.el
+    
+    ;; leave link
+    (insert (concat "[[" file "][" title "]]" ))
+    ;; like
+    ;; #+title: 问题/功能/目的：log 流程
+    ;; #+author: ingtshan
+    ;; #+date: <2021-10-29 Fri>
+
+    ;; template
+
+    ;; #+begin_quote
+    ;; Summary:
+    ;; 总结：
+
+    ;; Concept and Solution:
+    ;; 概念方法：
+    ;; #+end_quote
+    ;; - 自顶向下设计
+    ;;   - 子功能
+
+    ;; - Q
+    ;;   - X false/or not now
+    ;;   - A right
+    ;;     - Q/A
+    ;;     - S1 solution 1
+    (unless (file-exists-p (file-truename file))
+      (with-temp-buffer
+        ;; title zoom
+        (insert
+         (concat "#+title: "
+                 title
+                 "\n#+author: ingtshan\n#+date: "
+                 (format-time-string "<%F %a>\n\n")))
+        ;; template content
+        (insert "#+end_quote\nSummary:\n总结：\n\nConcept and Solution:\n概念和方法：\n#+end_quote\n\n")
+        (insert "- 自顶向下设计\n  - 子功能\n\n- Q\n  - X false/or not now\n  - A right\n    - Q/A\n    - S1 solution 1\n")
+        (write-file (file-truename file))))))
+
+;; maybe not useful for now
+(defmacro util/replace-regexp-alist-in-string (string replace-alist)
+  "Return `string's value replace with `Regexp' rule in `replace-alist'
+But `string's value remain unchange"
+  (declare (indent 0))
+  `(seq-reduce
+    (lambda (string regexp-replacement-pair)
+      (replace-regexp-in-string
+       (car regexp-replacement-pair)
+       (cdr regexp-replacement-pair)
+       ,string))
+    ,replace-alist
+    ,string))
+#+end_src
+
+useage
+try ~mapcar~ ~mapc~ ~seq-reduce~
+try ~replace-regexp-in-strin~
+#+begin_src elisp
+(defun identity-fnx (x)
+  x)
+(defun identity-fnx (x)
+  'x)
+
+(defvar x '(a b c d))
+
+;; do action and update input list (by return value)
+(mapcar #'identity-fnx '(1 2 3))
+;; => (1 2 3)
+;; => (x x x)
+
+(mapcar #'identity-fnx x)
+;; => (a b c d)
+;; => (x x x x)
+
+(mapcar #'identity-fnx "abcde")
+;; => (97 98 99 100 101)
+(format "%s" (mapcar #'identity-fnx "abcde"))
+;; => "(97 98 99 100 101)"
+
+;; do action without update input list
+(mapc #'identity-fnx '(1 2 3))
+;; => (1 2 3)
+
+(mapc #'identity-fnx x)
+;; => (a b c d)
+
+(defun auto-correct (string replace-alist)
+  (seq-reduce
+   (lambda (string regexp-replacement-pair)
+     (replace-regexp-in-string
+      (car regexp-replacement-pair)
+      (cdr regexp-replacement-pair)
+      string))
+   replace-alise
+   string))
+
+(insert 
+ (auto-correct
+  ;; string
+  "【】（）「」、《+ +》"
+  '(("[【（「《 ]" . "\[")
+    ("[）】」》]" . "\]"))))[][][]、[+[+]
+;;=>[][][]、[]
+
+(insert 
+ (auto-correct
+  ;; string
+  "【】（）「」、《》"
+  '(("[【（「《]" . "\-")
+    ("[）】」》]" . "-"))))
+#+end_src
+
+usage (declare (indent *))
+#+begin_src elisp
+;; Declaring indent level
+(defmacro lispy-save-excursion (&rest body)
+  "More intuitive (`save-excursion' BODY)."
+  (declare (indent 0))
+  `(let ((out (save-excursion
+                ,@body)))
+     (when (bolp)
+       (back-to-indentation))
+     out))
+
+;; indent 0
+;; auto indent nice and tiy
+(lispy-save-excursion
+  (lispy--out-forward arg)
+  (backward-list)
+  (indent-sexp))
+
+(defmacro lispy-save-excursion-1 (&rest body)
+  "More intuitive (`save-excursion' BODY)."
+  (declare (indent 1))
+  `(let ((out (save-excursion
+                ,@body)))
+     (when (bolp)
+       (back-to-indentation))
+     out))
+
+(lispy-save-excursion-1
+    ;; what's going on here?
+    (lispy--out-forward arg)
+  ;; I am not indent haha
+  (backward-list)
+  (indent-sexp))
+
+(defmacro lispy-save-excursion-2 (&rest body)
+  "More intuitive (`save-excursion' BODY)."
+  (declare (indent 2))
+  `(let ((out (save-excursion
+                ,@body)))
+     (when (bolp)
+       (back-to-indentation))
+     out))
+
+(lispy-save-excursion-2
+    ;; what's going on here?
+    (lispy--out-forward arg)
+    ;; oops
+    (backward-list)
+  (indent-sexp))
+#+end_src

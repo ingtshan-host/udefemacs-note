@@ -1,0 +1,26 @@
+#+title: 两个 emacs GUI 实例
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+#+end_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+？我要两个GUI实例干什么？
+  - 多份配置，分 main dev 和 test 三个 branch
+  - 多个 emacs-server 通过 emacs-client 通信
+
+- Q how to creat two instance of GUI of emacs?
+  - S emacs deamon server with emacsclient
+  - S Mac? execute bin file under Emacs.app/Contents/MacOS/Emacs
+    - Q/A but with server hold in GUI process?
+  - A In linux or mac use [[https://emacs-china.org/t/emacs-spacemacs/8416/7][vitural Home env]]
+
+#+begin_src shell
+#macos
+env HOME='/Users/ingtshan/vhome' open -a /Applications/Emacs.app -n
+#+end_src

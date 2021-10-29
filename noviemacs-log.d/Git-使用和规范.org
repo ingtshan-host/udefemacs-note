@@ -1,0 +1,110 @@
+#+title: Git 使用和规范
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+#+end_quote
+Summary:
+总结：了解 git 基本流程（远程 main devel 本地 main devel feature）和基本概念（远
+程、本地、分支、打标签、commit、merge）。目前基本原则就是，主分支的远程提交要减少次
+数和保证安全。
+
+Concept and Solution:
+概念和方法：
+基本流程（远程 main devel 本地 main devel feature）
+基本概念（远程、本地、分支、打标签、commit、merge）
+#+end_quote
+
+- 正确使用 Git 不仅能保持文件版本有序，重要的是能提高一定的效率
+  - Q/A 本地使用规范 [[https://www.ruanyifeng.com/blog/2015/08/git-use-process.html][Git 使用规范流程 \- 阮一峰的网络日志]]
+    - keep ~master branch A~ clean and safe
+    - use another ~dev branch B~ in local (1-3 remain in local) 
+      - 1. use ~new feature C~  branch as workspace (git checkout and commit)
+      - 2. sync with master (cooperate) with rebase? commit and push to remote
+      - 3. finishing feature C then close workspace with merge and tar (maybe)
+    - dev branch B with a lot commit, goto local A pull new code
+    - ~local A~ merge B, keep clean then local A ~Pull Request~
+  - [[https://git-scm.com/book/zh/v2/Git-%E5%9F%BA%E7%A1%80-%E6%89%93%E6%A0%87%E7%AD%BE][Git \- 打标签]] [[https://driverzhang.github.io/post/git%E4%B8%8A%E7%BA%BFtag%E7%AE%A1%E7%90%86%E8%A7%84%E8%8C%83%E8%AE%BE%E8%AE%A1/][Git上线tag管理规范设计]]
+    2.1 版本管理标签定义规则：
+    - 版本号格式：X.Y.Z（主版本号，次版本号，补丁版本号）
+    - 增长规则
+      - 修复Bug但 ~不影响API~ 增长补丁版本号；
+      - ~API保持向下兼容~ 的 ~增加/修改时~ 增长次版本号；
+      - ~进行不向下兼容的修改时~ 增长主版本号。
+    - 另外注意一点就是，高版次升级，底版次需要清零。
+    - [ ] 基于 tag 回退
+  - feature achive  [[https://stackoverflow.com/questions/35738790/how-to-close-a-branch-in-git][how to close a branch in git \- Stack Overflow]]
+  - [ ] Q/A [[https://aaronflower.github.io/essays/github-fork-pull-workflow.html][Github 标准 Fork & Pull Request 流程]]
+
+- Q You should know how to
+  - pull branch
+  - create new branch
+  - switch branch
+  - add and commit (optional view diff)
+  - fetch new code and rebase
+  - merge feature branch to dev branch
+  - meger dev branch to master branch
+  - make Pull Request
+  - tag archive
+  - tag vxx.xx.xx
+    
+- Q mean what?
+git push
+fatal: 当前分支 devel 没有对应的上游分支。
+为推送当前分支并建立与远程上游的跟踪，使用
+git push --set-upstream origin devel
+   - first see `git push origin devel` can work
+   - concept: remote branch and loacal branch
+     - if local branch not specify which branch to pull/push, then git use
+       `upstream` as default chose
+
+#+begin_src shell
+cd work-dir         #already git
+git checkout main #local A
+git pull            #sync with remote A
+# if dev branch not exists
+# creat it from master afte pull
+git checkout -b devel
+# push to remote
+git push origin devel
+# update devel from main
+git checkout master
+git pull #make sure new
+git checkout devel
+git merge main
+
+#then is the same between local devel and local new feature branch
+#how to close ?
+# git tag archive/<branchname> <branchname>
+#You can tag the tip of the branch by archiving it, and then delete the branch.
+
+git tag archive/<branchname> <branchname>
+#delte branch
+git branch -d <branchname>
+#back to main brank (or what you want)
+git checkout main
+
+#`retrieved later'
+#he branch will be deleted, and can be retrieved later
+#by checking out the tag, and recreating the branch.
+git checkout archive/<branchname>
+git checkout -b new_branch_name
+#Or more simply
+git checkout -b new_branch_name archive/<branchname>
+#+end_src
+
+tag
+#+begin_src shell
+# -a -m is needed!
+git tag -a v0.0.0 -m "almost pure emacs"
+# to list
+git tag -l "v"
+git show v0.0.0
+# share with others in remote
+git push origin v0.0.0
+# patch base any commit 9fceb02
+git tag -a v0.0.1 9fceb02 -m “my tag”
+# local delete tag
+git tag -d v0.1.2
+#远程删除（一般不删除远程）：
+git push origin :refs/tags/v0.1.2
+#+end_src

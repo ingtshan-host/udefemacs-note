@@ -1,0 +1,19 @@
+#+title: log 同步脚本（单向 copy）
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+#+end_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- from ~/org/roam-v2/log/ to ~/.emacs.d/log/
+  file and dir select noviemacs-log.org noviemacs-log.d
+
+- Q elisp copy file and dir ?
+  - A [[http://ergoemacs.org/emacs/elisp_file_name_dir_name.html][Elisp: File and Directory Functions]]
+
+ 

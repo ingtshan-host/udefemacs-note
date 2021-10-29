@@ -1,0 +1,8 @@
+* 想法
+- emacs 静默保存 [[https://github.com/manateelazycat/auto-save][manateelazycat/auto\-save]] [[https://manateelazycat.github.io/emacs/2016/03/16/auto-save.html][Emacs, 我已经十年没有按过保存按键了]]
+* <2021-10-29 Fri>
+
+- [[./noviemacs-log.d/函数-log流程-新建问题解决日志.org][函数:log流程:新建问题解决日志]]
+- [[./noviemacs-log.d/两个-emacs-GUI-实例.org][两个 emacs GUI 实例]]
+- [[./noviemacs-log.d/Git-使用和规范.org][Git 使用和规范]]
+- [[./noviemacs-log.d/log-同步脚本-单向-copy.org][log-同步脚本-单向-copy]]
