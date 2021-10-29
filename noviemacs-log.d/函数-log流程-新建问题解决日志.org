@@ -125,7 +125,7 @@ noviemacs-principal:
                  "\n#+author: ingtshan\n#+date: "
                  (format-time-string "<%F %a>\n\n")))
         ;; template content
-        (insert "#+end_quote\nSummary:\n总结：\n\nConcept and Solution:\n概念和方法：\n#+end_quote\n\n")
+        (insert "#+begin_quote\nSummary:\n总结：\n\nConcept and Solution:\n概念和方法：\n#+end_quote\n\n")
         (insert "- 自顶向下设计\n  - 子功能\n\n- Q\n  - X false/or not now\n  - A right\n    - Q/A\n    - S1 solution 1\n")
         (write-file (file-truename file))))))
 

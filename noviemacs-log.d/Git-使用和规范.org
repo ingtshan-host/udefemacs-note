@@ -2,7 +2,7 @@
 #+author: ingtshan
 #+date: <2021-10-29 Fri>
 
-#+end_quote
+#+begin_quote
 Summary:
 总结：了解 git 基本流程（远程 main devel 本地 main devel feature）和基本概念（远
 程、本地、分支、打标签、commit、merge）。目前基本原则就是，主分支的远程提交要减少次
