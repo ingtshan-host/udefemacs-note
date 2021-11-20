@@ -1,0 +1,22 @@
+#+title: bujo 读取当前 buffer 未完成任务
+#+author: ingtshan
+#+date: <2021-11-06 Sat>
+
+#+begin_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- 分析当前buffer的bujo
+  - 扫描 未完成标志 <>- 
+  - 逐个 table cell 判断
+  - 维护 list
+
+- Q
+  - X false/or not now
+  - A right
+    - Q/A
+    - S1 solution 1

@@ -148,58 +148,61 @@ useage
 try ~mapcar~ ~mapc~ ~seq-reduce~
 try ~replace-regexp-in-strin~
 #+begin_src elisp
-(defun identity-fnx (x)
-  x)
-(defun identity-fnx (x)
-  'x)
+    (defun identity-fnx (x)
+      x)
+    (defun identity-fnx (x)
+      'x)
 
-(defvar x '(a b c d))
+    (defvar x '(a b c d))
 
-;; do action and update input list (by return value)
-(mapcar #'identity-fnx '(1 2 3))
-;; => (1 2 3)
-;; => (x x x)
+    ;; do action and update input list (by return value)
+    (mapcar #'identity-fnx '(1 2 3))
+    ;; => (1 2 3)
+    ;; => (x x x)
 
-(mapcar #'identity-fnx x)
-;; => (a b c d)
-;; => (x x x x)
+    (mapcar #'identity-fnx x)
+    ;; => (a b c d)
+    ;; => (x x x x)
 
-(mapcar #'identity-fnx "abcde")
-;; => (97 98 99 100 101)
-(format "%s" (mapcar #'identity-fnx "abcde"))
-;; => "(97 98 99 100 101)"
+    (mapcar (lambda (x) "c") "abc")
 
-;; do action without update input list
-(mapc #'identity-fnx '(1 2 3))
-;; => (1 2 3)
 
-(mapc #'identity-fnx x)
-;; => (a b c d)
+    (mapcar #'identity-fnx "abcde")
+    ;; => (97 98 99 100 101)
+    (format "%s" (mapcar #'identity-fnx "abcde"))
+    ;; => "(97 98 99 100 101)"
 
-(defun auto-correct (string replace-alist)
-  (seq-reduce
-   (lambda (string regexp-replacement-pair)
-     (replace-regexp-in-string
-      (car regexp-replacement-pair)
-      (cdr regexp-replacement-pair)
-      string))
-   replace-alise
-   string))
+    ;; do action without update input list
+    (mapc #'identity-fnx '(1 2 3))
+    ;; => (1 2 3)
 
-(insert 
- (auto-correct
-  ;; string
-  "【】（）「」、《+ +》"
-  '(("[【（「《 ]" . "\[")
-    ("[）】」》]" . "\]"))))[][][]、[+[+]
-;;=>[][][]、[]
+    (mapc #'identity-fnx x)
+    ;; => (a b c d)
 
-(insert 
- (auto-correct
-  ;; string
-  "【】（）「」、《》"
-  '(("[【（「《]" . "\-")
-    ("[）】」》]" . "-"))))
+    (defun auto-correct (string replace-alist)
+      (seq-reduce
+       (lambda (string regexp-replacement-pair)
+         (replace-regexp-in-string
+          (car regexp-replacement-pair)
+          (cdr regexp-replacement-pair)
+          string))
+       replace-alise
+       string))
+
+    (insert 
+     (auto-correct
+      ;; string
+      "【】（）「」、《+ +》"
+      '(("[【（「《 ]" . "\[")
+        ("[）】」》]" . "\]"))))[][][]、[+[+]
+    ;;=>[][][]、[]
+
+    (insert 
+     (auto-correct
+      ;; string
+      "【】（）「」、《》"
+      '(("[【（「《]" . "\-")
+        ("[）】」》]" . "-"))))
 #+end_src
 
 usage (declare (indent *))

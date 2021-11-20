@@ -1,0 +1,91 @@
+#+title: bujo 任务状态修改
+#+author: ingtshan
+#+date: <2021-11-03 Wed>
+
+#+begin_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- 读取所在行（或块），并修改生效
+
+- Q
+  - X false/or not now
+  - A right
+    - Q/A
+    - S1 solution 1
+
+- Q save-excursion
+  - Q usage
+
+#+begin_src emacs-lisp
+  (save-excursion (beginning-of-line) (looking-at "x"))
+
+  (save-excursion
+    (save-restriction
+      (narrow-to-region
+       (line-beginning-position)
+       (line-end-position))
+      (goto-char (point-min))
+      (while (search-forward "-" nil "noerror")
+        (replace-match "x"))
+      ));;xxx
+
+  (defun bujo/current-cell ()
+    "Return (bge . end) is point to a table cell
+  Otherwise return (nil)"
+    (let ((beg nil)
+          (end nil))
+
+      (save-excursion
+        (save-restriction
+          (narrow-to-region
+           (line-beginning-position)
+           (line-end-position))
+
+          (save-excursion
+            (while (search-backward "|" nil "noerror")
+              (setq beg (point))))
+
+          (and beg
+               (save-excursion
+                 (while (search-forward "|" nil "noerror")
+                   (setq end (point)))))))
+
+      (cons beg end)))
+
+  (defun bujo/set-task-state (state)
+    "Search bullet in current cell and change it to input state"
+    (let ((cell (bujo/current-cell)))
+      (when (cdr cell)
+        (save-excursion
+          (save-restriction
+            (narrow-to-region
+             (car cell)
+             (cdr cell))
+            (goto-char (point-min))
+            (while (search-forward-regexp "[x\<\>\-]" nil "noerror")
+              (replace-match state)))))))
+
+  (defun bujo/set-current-task-state ()
+    "Search bullet in current cell and change it to input state"
+    (interactive)
+    (let* ((cell (bujo/current-cell))
+           (state (if (cdr cell)
+                      (completing-read
+                       "任务状态: "
+                       '("- 待办" "< 计划" "x 完成" "> 转移"))
+                    nil)))
+      (when state
+        (save-excursion
+          (save-restriction
+            (narrow-to-region
+             (car cell)
+             (cdr cell))
+            (goto-char (point-min))
+            (while (search-forward-regexp "[x\<\>\-]" nil "noerror")
+              (replace-match (substring state 0 1))))))))
+#+end_src

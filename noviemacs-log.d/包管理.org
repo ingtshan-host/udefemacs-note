@@ -1,0 +1,361 @@
+#+title: 包管理
+#+author: ingtshan
+#+date: <2021-10-29 Fri>
+
+* first meet with leaf.el
+#+begin_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- 自顶向下设计
+  - 快速找到自己在 init 文件中配置插件的位置 ~leaf-find~
+- 扩展 leaf-cover 为类似 C-x C-e
+- 定义自己的配置代码块为 unit 可以像 leaf-find 那样 unit-find
+  - leaf block?
+  - 扩展 leaf
+    - leaf-unit
+    - leaf-find-with-unit
+    - leaf-find-with-unit-regexp
+
+- Q how to get value from point
+  - S [[https://emacs.stackexchange.com/questions/28367/get-word-at-point][Get word at point \- Emacs Stack Exchange]]
+    - Q/A string to symbol?
+      [[https://emacsredux.com/blog/2014/12/05/converting-between-symbols-and-strings/][Converting Between Symbols and Strings \| Emacs Redux]]
+    - Q/A string to sexp?
+      [[https://stackoverflow.com/questions/40870547/emacs-evaluate-buffer-contents-as-an-s-expression][emacs: Evaluate buffer contents as an s\-expression? \- Stack Overflow]]
+- Q/A how eval the lisp code in string? using ~read-from-string~
+  (eval (car (read-from-string "command"))
+
+- 
+
+- read-later-list
+  [[https://www.youtube.com/watch?v=ZolOUgXHgbo&ab_channel=SystemCrafters][System Crafters Live\! \- Investigating use\-package Alternatives \- YouTube]]
+
+  #+begin_src elisp 
+  (defun insert-leaf-convert-last-sexp ()
+    "leaf-convert last sexp then inserat after"
+    (interactive)
+    (let ((sexp-str (thing-at-point 'sexp 'no-properties)))
+      (insert "\n;;=>leaf-convert")
+      (insert
+       
+       (replace-regexp-in-string
+        (regexp-quote "\n(\n") "(" ;; no single (
+
+        (replace-regexp-in-string
+         (regexp-quote ":") "\n:" ;; break at :
+       
+         (replace-regexp-in-string
+          (regexp-quote "(") "\n(" ;; break at (
+          (format "%s"
+                  (eval
+                   (car
+                    (read-from-string
+                     (concat "(leaf-convert "
+                             sexp-str
+                             " )")))))
+          nil 'literal)
+         nil 'literal)
+        nil 'literal))))
+  #+end_src
+
+  leaf-find?
+  #+begin_src elisp
+  (defun leaf-find (name)
+    "Find the leaf block of NAME."
+
+    (interactive
+     (let ((candidates (delete-dups (mapcar #'car leaf--paths))))
+       (if (not candidates)
+           (error "Leaf has no definition informations")
+         (list (completing-read "Find leaf: " (delete-dups (mapcar #'car leaf--paths)))))
+       );;let ends here
+     );;ineractive ends here
+
+    (require 'find-func)
+    (let* ((name (intern name))
+           (paths (mapcan (lambda (elm) (when (eq name (car elm)) (list (cdr elm)))) leaf--paths))
+           (path (if (= (length paths) 1) (car paths) (completing-read "Select one: " paths)))
+           (location (find-function-search-for-symbol name 'leaf path)))
+
+      (when location
+        (prog1 (pop-to-buffer (car location))
+          (when (cdr location)
+            (goto-char (cdr location)))
+          (run-hooks 'find-function-after-hook)))))
+
+
+  (let* ((name 'leaf)
+         (paths (mapcan (lambda (elm) (when (eq name (car elm)) (list (cdr elm)))) leaf--paths))
+         (path (if (= (length paths) 1) (car paths) (completing-read "Select one: " paths)))
+         (location (find-function-search-for-symbol name 'leaf path)))
+    location)
+  ;; paths => ("path")
+  ;; path => "path"
+  ;; location =>  (#<buffer init-pkg.el> . 2479)
+
+  ;; so I need to know how `leaf--paths' is managed
+  ;; and what is the type of 'leaf in (find-function-search-for-symbol name 'leaf path)
+  (defmacro leaf-handler-leaf-path (name)
+    "Meta handler for :leaf-path for NAME."
+    `(let ((file (leaf-this-file)))
+       (unless (boundp 'leaf--paths) (defvar leaf--paths nil))
+       (when file
+         (add-to-list 'leaf--paths (cons ',name file)))))
+
+  (defsubst leaf-this-file ()
+    "Return path to this file."
+    (or (bound-and-true-p leaf--load-file-name)
+        (bound-and-true-p byte-compile-current-file)
+        load-file-name
+        buffer-file-name))
+
+  (defmacro defsubst (name arglist &rest body)
+    "Define an inline function.  The syntax is just like that of `defun'.
+
+     \(fn NAME ARGLIST &optional DOCSTRING DECL &rest BODY)"
+    (declare (debug defun) (doc-string 3))
+    (or (memq (get name 'byte-optimizer)
+              '(nil byte-compile-inline-expand))
+        (error "`%s' is a primitive" name))
+    `(prog1
+         (defun ,name ,arglist ,@body)
+       (eval-and-compile
+         (put ',name 'byte-optimizer 'byte-compile-inline-expand))))
+
+  (defmacro leaf (name &rest args)
+    "Symplify your `.emacs' configuration for package NAME with ARGS."
+    (declare (indent defun))
+    (let* ((args* (leaf-sort-values-plist
+                   (leaf-normalize-plist
+                    (leaf-apply-keyword-alias
+                     (leaf-append-defaults args)) 'merge 'eval)))
+           leaf--autoload)
+      `(prog1 ',name
+         ,@(leaf-process-keywords name args* args*))))
+
+  (prog1 '@test
+    (leaf-handler-leaf-path @test)
+    (leaf-handler-leaf-protect @test @body))
+
+  #+end_src
+
+  my leaf-unit and leaf-find-with-unit
+  #+begin_src elisp
+  (defcustom leaf-find-unit-regexp ".*([[:space:]]*leaf-unit[[:space:]]+\\(%s\\)"
+    "The regexp used by `leaf-find-with-unir' to search for a leaf block.
+  Note it must contain a `%s' at the place where `format'
+  should insert the leaf name."
+    :type 'regexp
+    :group 'leaf)
+
+  (add-to-list
+  'find-function-regexp-alist
+  '(leaf-unit . leaf-find-unit-regexp))
+
+  (defmacro leaf-unit (base &rest body)
+    "do the sexp in body with leaf-bolck name base-unit
+  Generate code like (leaf base-name-unit :config body)"
+    (declare (indent 1))
+    (let ((base (intern (format "+unit-%s" `,base))))
+      `(prog1 ',base
+         (leaf-handler-leaf-path ,base)
+         (leaf-handler-leaf-protect ,base ,@body))))
+
+  (defun leaf-find-with-unit (truename)
+    "Find the leaf block (and self make -unit) of NAME."
+    (interactive
+     (let ((candidates (delete-dups (mapcar #'car leaf--paths))))
+       (if (not candidates)
+           (error "Leaf has no definition informations")
+         (list (completing-read "Find leaf: " (delete-dups (mapcar #'car leaf--paths)))))))
+    (require 'find-func)
+    (let* ((name (intern truename))
+           (paths (mapcan (lambda (elm) (when (eq name (car elm)) (list (cdr elm)))) leaf--paths))
+           (path (if (= (length paths) 1) (car paths) (completing-read "Select one: " paths)))
+           (location nil))
+      (setq location
+            (if (string-match-p "^+unit" truename)
+                (find-function-search-for-symbol
+                 (intern (substring truename +5))
+                 'leaf-unit path)
+              (find-function-search-for-symbol name 'leaf path)))
+      (when location
+        (prog1 (pop-to-buffer (car location))
+          (when (cdr location)
+            (goto-char (cdr location)))
+          (run-hooks 'find-function-after-hook)))))
+  #+end_src
+* leaf.el :preface, :init, :config keywords
+
+Summary
+
+#+begin_src elisp
+(leaf leaf-conver :preface (preface-sexp) :init (init-sexp) :config (config-sexp))
+;; =>
+(prog1 'leaf-conver
+  (leaf-handler-leaf-path leaf-conver)
+  (leaf-handler-leaf-protect leaf-conver
+    (preface-sexp) ;; :preface here
+    (leaf-handler-package leaf-conver leaf-conver nil) ;; considered as (require 'package) ;; :ensure t here
+    (init-sexp)    ;; :init here
+    (config-sexp)  ;; :config here
+))
+
+
+#+end_src
+
+#+begin_src elisp
+
+(leaf leaf-conver :preface (test-sexp))
+;; =>
+(prog1 'leaf-conver
+  (leaf-handler-leaf-path leaf-conver)
+  (leaf-handler-leaf-protect leaf-conver
+    (test-sexp)
+    (leaf-handler-package leaf-conver leaf-conver nil)))
+
+(leaf leaf-conver :preface (test-sexp) :init (init-sexp))
+;; =>
+(prog1 'leaf-conver
+  (leaf-handler-leaf-path leaf-conver)
+  (leaf-handler-leaf-protect leaf-conver
+    (test-sexp)
+    (leaf-handler-package leaf-conver leaf-conver nil)
+    (init-sexp)))
+;; seems like :init in leaf.el is different form use-package
+(progn
+  (straight-use-package 'leaf-conver)
+  (defvar use-package--warning0
+    #'(lambda
+        (keyword err)
+        (let
+            ((msg
+              (format "%s/%s: %s" 'leaf-conver keyword
+                      (error-message-string err))))
+          (display-warning 'use-package msg :error))))
+  (condition-case-unless-debug err
+      (progn
+        (condition-case-unless-debug err
+            (init-sexp)
+          (error
+           (funcall use-package--warning0 :init err)))
+        (if
+            (not
+             (require 'leaf-conver nil t))
+            (display-warning 'use-package
+                             (format "Cannot load %s" 'leaf-conver)
+                             :error)))
+    (error
+     (funcall use-package--warning0 :catch err))))
+
+
+(leaf leaf-conver :preface (preface-sexp) :init (init-sexp) :config (config-sexp))
+;; =>
+(prog1 'leaf-conver
+  (leaf-handler-leaf-path leaf-conver)
+  (leaf-handler-leaf-protect leaf-conver
+    (preface-sexp)
+    (leaf-handler-package leaf-conver leaf-conver nil)
+    (init-sexp)
+    (config-sexp)))
+#+end_src
+
+* straight.el package list
+
+
+#+begin_src emacs-lisp
+
+  (defconst my-pkg-list
+    '(
+      ;; init-pkg
+      ;; straight.el
+      (leaf . nil)               ;包管理和配置
+      (leaf-keywords . nil)
+      (leaf-tree . nil)
+      (leaf-convert . nil)
+      (diminish . nil)         ;modeline 隐藏
+      (no-littering . nil)       ;etc var
+
+      ;; init-bas
+      (aggressive-indent . nil)
+      (yasnippet . nil)
+      (yasnippet-snippets . nil)
+
+      ;; init-editor
+      (indent-guide . nil)
+
+      ;; init-org
+      (org . nil)
+      (org-persist
+       .
+       '(org-persist
+         :type built-in))
+      (org-src
+       .
+       '(org-persist
+         :type built-in))
+
+      ;; init-nano
+      (nano-emacs
+       .
+       '(nano-emacs
+         :type git :host github
+         :repo "rougier/nano-emacs"))
+
+      ;; init-fonts
+      (vertico . nil)
+      (posframe . nil)
+      (vertico-posframe
+       .
+       '(vertico-posframe
+         :type git :host github
+         :repo "tumashu/vertico-posframe"))
+
+      (embark . nil)
+      (consult . nil)
+      (embark-consult . nil)
+      (orderless . nil)
+      (marginalia . nil)
+      (affe . nil)
+      (corfu . nil)
+      (company . nil)
+      (company-quickhelp . nil)
+
+      ;; init-roam
+      (org-roam . nil)
+
+
+      ;; init-patch
+      );; defconst ends here
+    "all the third package I need here"
+    )
+
+  (defun install-my-pkg()
+    "install all my pkg"
+    ;;clone all
+    (dolist (pkg my-pkg-list)
+      (straight-use-package
+       (if (cdr pkg) (cdr pkg) (car pkg))
+       nil t))
+    ;; load to path
+    (add-to-list
+     load-path
+     (expand-file-name "straight/repo" user-emacs-directory))
+    ;; build all
+    (dolist (pkg my-pkg-list)
+      ;; only clone
+      (straight-use-package
+       (if (cdr pkg) (cdr pkg) (car pkg))
+       t nil)))
+
+  ;; load init lib
+  (add-subdirs-to-load-path
+   (expand-file-name "etc/config" user-emacs-directory))
+
+  (require 'init-pkg)
+#+end_src

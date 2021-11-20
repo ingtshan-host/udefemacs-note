@@ -1,0 +1,47 @@
+#+title: org 配置
+#+author: ingtshan
+#+date: <2021-11-02 Tue>
+
+#+begin_quote
+Summary:
+总结：
+
+Concept and Solution:
+概念和方法：
+#+end_quote
+
+- 自顶向下设计
+  - 子功能
+
+- Q
+  - X false/or not now
+  - A right
+    - Q/A
+    - S1 solution 1
+    
+        #+begin_src elisp
+    ;;; org code block
+    (defun org-insert-src-block (src-code-type)
+      "Insert a `SRC-CODE-TYPE' type source code block in org-mode."
+      (interactive
+       (let ((src-code-types
+	      '("emacs-lisp" "rust" "python" "C" "shell" "java" "js" "clojure" "C++" "css"
+	        "calc" "asymptote" "dot" "gnuplot" "ledger" "lilypond" "mscgen"
+	        "octave" "oz" "plantuml" "R" "sass" "screen" "sql" "awk" "ditaa"
+	        "haskell" "latex" "lisp" "matlab" "ocaml" "org" "perl" "ruby"
+	        "scheme" "sqlite" "html")))
+         (list (ido-completing-read "Source code type: " src-code-types))))
+      (save-excursion
+        (newline-and-indent)
+        (insert (format "#+BEGIN_SRC %s\n" src-code-type))
+        (newline-and-indent)
+        (insert "#+END_SRC\n")
+        (previous-line 2)
+        (org-edit-src-code)))
+         #+end_src
+
+         #+BEGIN_SRC emacs-lisp
+
+         #+END_SRC
+
+      
